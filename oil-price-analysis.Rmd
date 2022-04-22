@@ -1,7 +1,7 @@
 ---
 title: "oil-price-analysis"
 author: "niranjana"
-date: '2022-04-19'
+date: '2022-04-21'
 output: html_document
 ---
 
@@ -9,22 +9,318 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
+## PROJECT : OIL PRICE ANALYSIS
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+## Description :
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+```{r install and load packages, include=FALSE}
 
-```{r cars}
-summary(cars)
+# Install packages - Uncomment when you run for the first time
+# install.packages(c("gamlss","gamlss.add","gamlss.dist"))
+# install.packages("psych")
+# install.packages("tidyverse")
+# install.packages('skimr')
+# install.packages('esquisse')
+# install.packages('miniUI')
+# install.packages("cowplot")
+# install.packages("DataCombine")
+
+# Load Required Packages
+
+# GAMLSS packages
+library(gamlss)
+library(gamlss.add)
+library(gamlss.dist)
+
+# package that stiched together many R packages
+library(tidyverse)
+
+# package for quick summaries
+library(skimr)
+
+# package to describe data frame
+library(psych)
+
+# for combining and claening datasets
+library(DataCombine)
+
+# drag drop for ggplot2
+library(esquisse)
+library(shiny)
+
+# plotting package
+library(ggplot2)
+
+# to plot grids
+library(cowplot)
 ```
 
-## Including Plots
+## About the Data Set:
 
-You can also embed plots, for example:
+Reference : <https://rdrr.io/cran/gamlss.data/man/oil.html>
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+The Oil data: Using model selection to discover what affects the price of oil. The data s contains the daily prices of front month WTI (West Texas Intermediate) oil price traded by NYMEX (New York Mercantile Exchange). The front month WTI oil price is a futures contract with the shortest duration that could be purchased in the NYMEX market. The idea is to use other financially traded products (e.g., gold price) to discover what might affect the daily dynamics of the price of oil.
+
+```{r}
+#extract the oil dataset
+data(oil)
+
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+A data frame with 1000 observations on the following 25 variables.
+
+```{r}
+# Print Different Variable names in the data set
+colnames(oil)
+```
+
+### Description of Variables:
+
+`OILPRICE`
+
+:   the log price of front month WTI oil contract traded by NYMEX - in financial terms, this is the CL1. This is the response variable.
+
+`CL2_log`, `CL3_log`, `CL4_log`, `CL5_log`, `CL6_log`, `CL7_logCL8_log`, `CL9_log`, `CL10_log`, `CL11_log`, `CL12_log`, `CL13_log`, `CL14_log`, `CL15_log`
+
+:   numeric vectors which are the log prices of the 2 to 15 months ahead WTI oil contracts traded by NYMEX. For example, for the trading day of 2nd June 2016, the CL2 is the WTI oil contract for delivery in August 2016.
+
+`BDIY_log`
+
+:   the Baltic Dry Index, which is an assessment of the price of moving the major raw materials by sea.
+
+`SPX_log`
+
+:   the S&P 500 index
+
+`DX1_log`
+
+:   the US Dollar Index.
+
+`GC1_log`
+
+:   he log price of front month gold price contract traded by NYMEX
+
+`HO1_log`
+
+:   the log price of front month heating oil contract traded by NYMEX
+
+`USCI_log`
+
+:   the United States Commodity Index
+
+`GNR_log`
+
+:   the S&P Global Natural Resources Index
+
+`SHCOMP_log`
+
+:   the Shanghai Stock Exchange Composite Index.
+
+`FTSE_log`
+
+:   the FTSE 100 Index
+
+`respLAG`
+
+:   the lag 1 of OILPRICE - lagged version of the response variable.
+
+:   
+
+```{r}
+# Display first 5 rows of oil data
+head(oil, n = 5)
+```
+
+```{r}
+# Check if there are any null values
+sum(is.na(oil))
+
+```
+
+```{r}
+# Show Summary Statistics for each of the variables in the dataset
+skim(oil)
+```
+
+```{r}
+# Since the data is daily data, let us add a index (0 -999) to the data
+oil <- tibble::rowid_to_column(oil, "index")
+```
+
+```{r}
+# Display data with the Index
+head(oil,5)
+
+```
+
+```{r}
+
+# Show trends of Oil Price with Time
+ggplot(oil) +
+ aes(x = index, y = OILPRICE) +
+ geom_line(size = 0.5, colour = "#EF562D") +
+ labs(title = 'Oil Price Over Time', x = 'Days', y = 'Oil Price')
+```
+
+```{r echo=FALSE}
+# Print the different indices against time
+plot_indices <- oil %>%
+  select(index , SPX_log, DX1_log, BDIY_log,GC1_log,HO1_log,USCI_log,GNR_log, FTSE_log ) %>%
+  gather(key = "variable", value = "value", -index)
+```
+
+```{r}
+```
+
+```{r echo=TRUE}
+p1 <- ggplot(oil) +
+  aes(x = OILPRICE, y = BDIY_log) +
+ geom_point(shape = "circle", size = 0.5, colour = "#71A1D0") +
+  labs(x = "Baltic Dry Index", y ='') +
+ theme_bw() +
+  background_grid(minor = 'none')
+
+p2 <- ggplot(oil) +
+ aes(x = OILPRICE, y = SPX_log) +
+ geom_point(shape = "circle", size = 0.5, colour = "#E99984") +
+  labs(x = "S&P 500 index", y ='') +
+ theme_minimal() +
+  background_grid(minor = 'none')
+
+p3 <- ggplot(oil) +
+ aes(x = OILPRICE, y = DX1_log) +
+ geom_point(shape = "circle", size = 0.5, colour = "#3FB23F") +
+  labs(x = "US Dollar Index", y ='') +
+ theme_minimal() +
+  background_grid(minor = 'none')
+
+p4 <- ggplot(oil) +
+ aes(x = OILPRICE, y = GC1_log) +
+ geom_point(shape = "circle", size = 0.5, colour = "#064B84") +
+  labs(x = "Gold price", y ='') +
+ theme_minimal() +
+  background_grid(minor = 'none')
+
+p5 <- ggplot(oil) +
+ aes(x = OILPRICE, y = HO1_log) +
+ geom_point(shape = "circle", size = 0.5, colour = "#FF5F5F") +
+  labs(x = "Heating Oil Contract", y ='') +
+ theme_minimal() +
+  background_grid(minor = 'none')
+
+p6 <- ggplot(oil) +
+ aes(x = OILPRICE, y = USCI_log) +
+ geom_point(shape = "circle", size = 0.5, colour = "#FBB663") +
+  labs(x = " US Commodity Index", y ='') +
+ theme_minimal() +
+  background_grid(minor = 'none')
+
+p7 <- ggplot(oil) +
+ aes(x = OILPRICE, y = GNR_log) +
+ geom_point(shape = "circle", size = 0.5, colour = "#FBA3CF") +
+  labs(x = " S&P Global Natural Resources", y ='') +
+ theme_minimal()
+
+p8 <- ggplot(oil) +
+ aes(x = OILPRICE, y = SHCOMP_log) +
+ geom_point(shape = "circle", size = 0.5, colour = "#EB99FF") +
+  labs(x = " Shanghai SE Composite ", y ='') +
+ theme_minimal() +
+  background_grid(minor = 'none')
+
+p9 <- ggplot(oil) +
+ aes(x = OILPRICE, y = FTSE_log) +
+ geom_point(shape = "circle", size = 0.5, colour = "#A699CD") +
+  labs(x = "TSE 100 ", y ='') +
+ theme_minimal() +
+  background_grid(minor = 'none')
+
+# plot the grid
+plot_row <-plot_grid(p1,
+          p2,
+          p3,
+          p4,
+          p5,
+          p6,
+          p7,
+          p8,
+          p9,
+        labels = c('A', 'B', 'D', 'E', 'F', 'G', 'H', 'I', 'J'), label_size = 10, rel_heights = c(2, 2), align = 'hv' )
+
+# now add the title
+title <- ggdraw() +
+  draw_label(
+    "Variation of Oil Prices with Different Indices",
+
+    x = 0,
+    hjust = 0
+  ) +
+  theme(
+    # add margin on the left of the drawing canvas,
+    # so title is aligned with left edge of first plot
+    plot.margin = margin(0, 0, 0, 7)
+  )
+plot_grid(
+  title, plot_row,
+  ncol = 1,
+  # rel_heights values control vertical title margins
+  rel_heights = c(0.1, 1)
+)
+```
+
+### Observed Trends
+
+| Index (Variable) |    Observed Trend with Oil Price     |
+|:----------------:|:------------------------------------:|
+|     SPX_log      |           No clear trends            |
+|     DX1_log      |    Possible Negative Correlation     |
+|     BDIY_log     |    Possible Positive Correlation     |
+|     GC1_log      |  Possible Weak Positive Correlation  |
+|     HO1_log      | Possible Strong Positive Correlation |
+|     USCI_log     | Possible Strong Positive Correlation |
+|     GNR_log      | Possible Strong Positive Correlation |
+|     FTSE_log     |           No clear trends            |
+|    SHCOMP_log    |           No clear trends            |
+
+: Observed Trends
+
+## Transformations on Oil Price 
+
+    # Time series Analysis
+
+```{r}
+oil_transf <- oil[c("index","OILPRICE")]
+
+# Both WTI and Brent Crude futures are traded from Sunday through Friday, 6:00 p.m. to 5:00 - So we add only Weekdays to the R table 
+x<-seq(as.Date("2018-01-01"),as.Date("2022-4-22"),by = 1)
+x<-x[!weekdays(x) %in% c("Saturday","Sunday")]
+df<-data.frame(x)
+
+# Adding a Date column to the Table
+oil_transf['Date'] <- df %>% slice(126:1125)
+oil_transf
+```
+
+```{r echo = TRUE}
+
+# Distribution of Oil Price
+
+ggplot(oil_transf) +
+ aes(x = OILPRICE) +
+ geom_histogram(bins = 30L, fill = "#99BDFF") +
+ theme_minimal()
+
+```
+
+The distribution of oil price is not a normal distribution. In order to glean more information from the data, let us find different transformations of the oil price
+
+```{r}
+oil_transf <- PercChange(oil_transf, Var = 'OILPRICE', type = 'percent', NewVar = '% Change', slideBy = -1)
+
+oil_transf
+
+```
+
+```{r}
+
+```
