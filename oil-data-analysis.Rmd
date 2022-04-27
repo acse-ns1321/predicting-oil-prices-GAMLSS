@@ -1004,7 +1004,7 @@ train <- oil_new[1:train_nrows,]
 test <- oil_new[(train_nrows + 1):1000,]
 ```
 
-## Step 1 :  Selecting a Distribution
+##  Selecting a Distribution
 
 source : <https://www.gamlss.com/short-courses-and-talks/>
 
@@ -1171,9 +1171,9 @@ The available algorithms include :
 
 ```{r}
 
-# m1.cg =gamlss(OILPRICE ~., family = SHASH,
-#       data = train, method=CG(50))
-# m1.cg
+m1.cg =gamlss(OILPRICE ~., family = SEP4,
+      data = train, method=CG(50))
+m1.cg
 
 ```
 
